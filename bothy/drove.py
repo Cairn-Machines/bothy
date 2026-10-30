@@ -601,7 +601,6 @@ _KIND_TITLE = {
     "pane-budget": "the run is out of panes",
 }
 _KIND_SEVERITY = {"gone": "critical", "question": "info", "asking": "info", "pane-budget": "info"}
-_QUOTED = {"question", "asking", "blocked", "promote"}   # the words are the point
 
 
 def _project_of(run: str, site: str) -> str:
@@ -634,7 +633,7 @@ def notice_for(site: str, item: dict[str, Any], *, resolved: bool = False, run_u
     title = f"{_project_of(run, site)} · {_KIND_TITLE.get(kind, 'something needs you').format(seat=seat)}"
     sentence = _KIND_SENTENCE.get(kind, "{who} needs a person.").format(who=who)
     said = _neutralise(_clip(str(item.get("text") or ""), TEXT_LIMIT))
-    if said and (kind in _QUOTED or kind not in _KIND_SENTENCE):
+    if said:
         sentence = f"{sentence}\n> {said}"
     if resolved:
         why = "answered or cleared" if run_up else "the run is no longer up"

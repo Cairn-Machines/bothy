@@ -211,7 +211,10 @@ class LaunchAgentTests(unittest.TestCase):
             ran.append(command if isinstance(command, str) else " ".join(command))
             return subprocess.CompletedProcess(command, 0, "", "")
 
-        with mock.patch("subprocess.run", fake_run):
+        # This is specifically a per-user LaunchAgent, so model a normal login
+        # account even when the suite itself runs as root in CI.
+        with mock.patch("bothy.cli.os.geteuid", return_value=501), \
+                mock.patch("subprocess.run", fake_run):
             code, output = self.run_main("install", "--kind", "launchagent")
         self.assertEqual(code, 0, output)
         unit = self.tmp / "Library" / "LaunchAgents" / "dev.bothy.mac.plist"
@@ -222,7 +225,8 @@ class LaunchAgentTests(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(wrapper.stat().st_mode), 0o755)
         self.assertTrue(any("launchctl bootstrap gui/" in command for command in ran))
 
-        with mock.patch("subprocess.run", fake_run):
+        with mock.patch("bothy.cli.os.geteuid", return_value=501), \
+                mock.patch("subprocess.run", fake_run):
             code, _ = self.run_main("uninstall", "--kind", "launchagent")
         self.assertEqual(code, 0)
         self.assertFalse(unit.exists())

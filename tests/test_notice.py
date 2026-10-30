@@ -36,7 +36,8 @@ class EmbedTests(unittest.TestCase):
     def test_a_planner_that_stopped_reads_as_a_sentence_with_the_command_to_run(self) -> None:
         embed = self.embed(GONE)
         self.assertEqual(embed["title"], "dispofi-api · the planner stopped")
-        self.assertEqual(embed["description"], "The planner stopped, so nothing is steering this run.")
+        self.assertEqual(embed["description"],
+                         f"The planner stopped, so nothing is steering this run.\n> {GONE['text']}")
         self.assertEqual(embed["fields"][0], {"name": "What to do", "inline": False,
                                               "value": f"```\ndrove up --run {RUN} --detached\n```"})
         self.assertEqual(embed["fields"][1]["name"], "Run")
@@ -67,6 +68,13 @@ class EmbedTests(unittest.TestCase):
             self.assertNotIn("something needs you", embed["title"], kind)
             seen.add(embed["title"])
         self.assertGreaterEqual(len(seen), 11, "kinds are told apart")
+
+    def test_every_needs_you_alert_shows_the_attention_item(self) -> None:
+        for kind in KINDS:
+            detail = f"Exact item detail for {kind}"
+            item = attention(kind, text=detail)
+            embed = self.embed(item)
+            self.assertIn(f"> {detail}", embed["description"], kind)
 
     def test_a_kind_drove_adds_later_still_says_something(self) -> None:
         embed = self.embed(attention("brand-new", seat="w-api", text="Do the thing"))
