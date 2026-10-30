@@ -78,6 +78,13 @@ class EmbedTests(unittest.TestCase):
         self.assertIn("planner's pane", value)
         self.assertIn("herdr pane read w2M:p1", value)
 
+    def test_hc_read_inspect_is_shown_verbatim(self) -> None:
+        command = "hc read --lines 40 t7"
+        embed = self.embed(attention("dialog", answer={"type": "pane", "pane": "t7", "inspect": command}))
+        self.assertIn(f"```\n{command}\n```", embed["fields"][0]["value"])
+        self.assertEqual(notice_for("mac", attention(
+            "dialog", answer={"type": "pane", "pane": "t7", "inspect": command})).command, command)
+
     def test_worker_text_cannot_ping_or_close_the_code_block(self) -> None:
         item = attention("question", seat="w-api", text="@everyone <!channel> ``` boom",
                          answer={"type": "command", "command": "run ``` @everyone"})

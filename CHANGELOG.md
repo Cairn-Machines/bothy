@@ -9,6 +9,12 @@ Every release states its **Breaking Changes** heading even when it is empty.
 
 ## Unreleased
 
+### Fixed
+
+- **Drove with herdr-core (BOTHY-58):** the herdr-down recovery hint and setup
+  guidance name both herdr and the Herdr app (herdr-core). Regression tests
+  cover counted, bounded retries and verbatim `hc read` inspection commands.
+
 ## 0.3.0 — 2026-10-14
 
 ### Security

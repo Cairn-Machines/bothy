@@ -234,8 +234,8 @@ round trip has not been verified.
 
 ## Drove runs
 
-Bothy can start Drove runs (a planner and its workers in herdr panes, on a Cairn
-task) and tell you when one needs a person. It runs Drove's CLI as a plain process: no model turn,
+Bothy can start Drove runs (a planner and its workers in herdr or herdr-core
+terminals, on a Cairn task) and tell you when one needs a person. It runs Drove's CLI as a plain process: no model turn,
 no Codex, no sandbox. Its settings are under "Drove" in `CONFIG.md`.
 
 ```bash
@@ -246,10 +246,11 @@ bothy drove attention                    # what needs a person, and whether chat
 
 **What the machine needs.** All of it, for the account Bothy runs as:
 
-- a **herdr server running**. Drove opens a workspace in it and never starts it,
-  so with none a start is refused `herdr-down` and **waits**, counted, like any
-  capacity refusal (30 attempts, about 28 minutes of retries, then abandoned out loud);
-- `drove`, `herdr`, `node` 22.18+, `git`, `cairn` and the planner's agent
+- a **herdr server or herdr-core running** (the Herdr app, or `hc` on a headless
+  host). Drove opens a workspace in it and never starts it, so with neither a
+  start is refused `herdr-down` and **waits**, counted, like any capacity refusal
+  (30 attempts, about 28 minutes of retries, then abandoned out loud);
+- `drove`, `herdr` or `hc`, `node` 22.18+, `git`, `cairn` and the planner's agent
   (`claude` or `codex`) on `PATH`, **and signed in**;
 - the repository named by `drove_repo`, with its folder trusted once by hand.
   Drove never answers a trust dialog; it shows as an item that needs a person.
@@ -418,7 +419,8 @@ bothy reap    # kills leftover process groups and releases their budget
 The default macOS install is a **LaunchDaemon**: it starts at boot with nobody
 logged in, which is right for a client's unattended mini and wrong for anything
 that needs your session. A daemon has no GUI session, so it cannot reach the
-herdr server you started, the Claude login in your Keychain, or `~/.local/bin`.
+herdr server or Herdr app (herdr-core) you started, the Claude login in your
+Keychain, or `~/.local/bin`.
 For a machine you use, install a per-user **LaunchAgent** instead. No sudo:
 
 ```bash
@@ -434,7 +436,7 @@ It writes `~/Library/LaunchAgents/dev.bothy.<site>.plist`, a launcher at
 - **It starts when you log in, not when the machine boots**, and stops when you
   log out. A power cut leaves it down until someone logs in.
 - **PATH is the PATH of the shell that ran the installer**, minus directories that
-  do not exist, so `drove`, `herdr`, `node`, `claude` and `cairn` are found. It is
+  do not exist, so `drove`, `herdr` or `hc`, `node`, `claude` and `cairn` are found. It is
   printed by `--dry-run` and written into the plist. Pass `--path` to give another.
   The interpreter is the one that ran the installer, written into the launcher.
 - **Run it from a login that has the session** (a terminal on the Mac, or ssh into
