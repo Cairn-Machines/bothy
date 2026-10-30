@@ -147,6 +147,20 @@ class MemoryEdges(unittest.TestCase):
             self.assertEqual(cmd_doctor(argparse.Namespace(json=True, refresh=False), self.config), 0)
         self.assertNotIn("token cap", output.getvalue())
 
+    def test_doctor_does_not_look_for_linux_bubblewrap_on_macos(self):
+        self.config.codex_binary = "true"
+        self.config.sandbox = "readOnly"
+        output = io.StringIO()
+        with patch("bothy.cli.sys.platform", "darwin"), \
+                patch("bothy.cli.CairnTracker.available", return_value=True), \
+                contextlib.redirect_stdout(output):
+            self.assertEqual(cmd_doctor(argparse.Namespace(json=True, refresh=False), self.config), 0)
+        check = next(c for c in json.loads(output.getvalue())["checks"]
+                     if c["check"] == "sandbox can start")
+        self.assertTrue(check["ok"])
+        self.assertIn("Seatbelt", check["detail"])
+        self.assertNotIn("bubblewrap found", check["detail"])
+
     def test_restore_help_names_argument_order(self):
         output = io.StringIO()
         with contextlib.redirect_stdout(output), self.assertRaises(SystemExit) as caught:

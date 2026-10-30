@@ -215,22 +215,28 @@ def cmd_doctor(args: argparse.Namespace, config: Config) -> int:
     # sandbox that cannot start is a finding, not a footnote. This was found the
     # hard way: every model-only test passed and the first run that needed a
     # shell — a heartbeat working through its checklist — discovered it.
-    import shutil as _shutil
-    bwrap = _shutil.which("bwrap")
-    bundled = list(pathlib.Path("/usr/lib/node_modules/@openai").glob("**/codex-resources/bwrap")) \
-        if pathlib.Path("/usr/lib/node_modules/@openai").exists() else []
     if config.sandbox != "dangerFullAccess":
-        probe = subprocess.run([bwrap or (str(bundled[0]) if bundled else "bwrap"),
-                                "--ro-bind", "/", "/", "--unshare-net", "--", "/bin/true"],
-                               capture_output=True, text=True, timeout=20) if (bwrap or bundled) else None
-        if probe is None:
-            check("sandbox can start", False, "no bubblewrap found on PATH or bundled", fatal=False)
-        elif probe.returncode == 0:
-            check("sandbox can start", True, bwrap or str(bundled[0]))
+        # Codex uses Seatbelt on macOS; bubblewrap is its Linux sandbox helper
+        # and its absence there says nothing about whether the Mac sandbox works.
+        if sys.platform == "darwin":
+            check("sandbox can start", True,
+                  "macOS Codex sandbox is managed by Seatbelt; bubblewrap is Linux-only")
         else:
-            check("sandbox can start", False,
-                  (probe.stderr or probe.stdout).strip().splitlines()[-1][:160] +
-                  "  — runs needing a shell will fail", fatal=False)
+            import shutil as _shutil
+            bwrap = _shutil.which("bwrap")
+            bundled = list(pathlib.Path("/usr/lib/node_modules/@openai").glob("**/codex-resources/bwrap")) \
+                if pathlib.Path("/usr/lib/node_modules/@openai").exists() else []
+            probe = subprocess.run([bwrap or (str(bundled[0]) if bundled else "bwrap"),
+                                    "--ro-bind", "/", "/", "--unshare-net", "--", "/bin/true"],
+                                   capture_output=True, text=True, timeout=20) if (bwrap or bundled) else None
+            if probe is None:
+                check("sandbox can start", False, "no bubblewrap found on PATH or bundled", fatal=False)
+            elif probe.returncode == 0:
+                check("sandbox can start", True, bwrap or str(bundled[0]))
+            else:
+                check("sandbox can start", False,
+                      (probe.stderr or probe.stdout).strip().splitlines()[-1][:160] +
+                      "  — runs needing a shell will fail", fatal=False)
 
     if config.slack_app_token_env or config.slack_bot_token_env:
         import os as _os
@@ -780,17 +786,20 @@ def cmd_install(args: argparse.Namespace, config: Config) -> int:
     # file was created 0600 root:root and the daemon could not read its own
     # environment, failing with a bare "Permission denied" two layers below
     # anything that mentions Bothy.
-    import pwd as _pwd
-    try:
-        entry = _pwd.getpwnam(target.user)
-        owner = (entry.pw_uid, entry.pw_gid)
-    except KeyError:
-        print(f"bothy: no such user {target.user!r}", flush=True)
-        return EX_CONFIG
+    owner = None
+    if target.kind != installer.LAUNCHAGENT:
+        import pwd as _pwd
+        try:
+            entry = _pwd.getpwnam(target.user)
+            owner = (entry.pw_uid, entry.pw_gid)
+        except KeyError:
+            print(f"bothy: no such user {target.user!r}", flush=True)
+            return EX_CONFIG
 
     try:
         target.log_dir.mkdir(parents=True, exist_ok=True)
-        _os.chown(target.log_dir, *owner)
+        if owner is not None:
+            _os.chown(target.log_dir, *owner)
         config.ensure_dirs()
         for path, (body, mode) in files.items():
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -802,14 +811,16 @@ def cmd_install(args: argparse.Namespace, config: Config) -> int:
             # secrets and no excuse to put them in the world-readable unit.
             target.env_path.parent.mkdir(parents=True, exist_ok=True)
             target.env_path.write_text("# Bothy secrets. Mode 0600. KEY=value per line.\n", encoding="utf-8")
-            _os.chown(target.env_path, *owner)
+            if owner is not None:
+                _os.chown(target.env_path, *owner)
             _os.chmod(target.env_path, 0o600)
             print(f"  created {target.env_path} (mode 0600, owned by {target.user})")
         else:
             # An existing file might predate this fix, or have been placed by
             # hand. Make it readable by the service either way, without
             # touching its contents.
-            _os.chown(target.env_path, *owner)
+            if owner is not None:
+                _os.chown(target.env_path, *owner)
             _os.chmod(target.env_path, 0o600)
     except OSError as exc:
         print(f"bothy: install failed: {exc}", flush=True)
