@@ -313,7 +313,8 @@ def reaction_for(result: StartResult) -> str:
         return ("A start that timed out may still have made a run: drove roster, and herdr, "
                 "before starting it again.")
     return {
-        "herdr-down": "Start herdr on this machine; Drove opens a workspace in it and never starts it.",
+        "herdr-down": ("Start herdr, or open the Herdr app (herdr-core), on this machine; "
+                       "Drove uses the one that is running and never starts it."),
         "no-task": "That Cairn task or project has nothing to take; cairn show it.",
         "task-closed": "That Cairn task is closed; Drove will not plan a closed task.",
         "cairn": ("Drove could not read Cairn from this process, which has no key of its own: "

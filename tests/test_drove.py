@@ -301,6 +301,12 @@ class CliTests(FakeDroveMixin, unittest.TestCase):
         self.assertEqual(records[0]["data"]["code"], "herdr-down")
         self.assertEqual(self.runs().watching(), [], "nothing is watched for a run that never began")
 
+    def test_herdr_down_hint_names_both_backends_on_one_line(self) -> None:
+        hint = reaction_for(StartResult("refused", code="herdr-down"))
+        self.assertIn("Start herdr", hint)
+        self.assertIn("Herdr app (herdr-core)", hint)
+        self.assertNotIn("\n", hint)
+
     def test_a_cairn_refusal_says_the_process_has_no_key_not_run_drove_by_hand(self) -> None:
         """The first live run failed here: a launchd job has no runtime for Cairn to detect."""
         self.reply("plan", refusal("cairn", "could not read Cairn task DROVE-110: CAIRN_API_KEY is not set"))
@@ -789,6 +795,41 @@ class DaemonTests(FakeDroveMixin, unittest.TestCase):
         self.now += dt.timedelta(seconds=1)
         self.assertEqual(daemon.drove_wakes(), 1)
         self.assertEqual(self.store.pending(), [])
+
+    def test_herdr_core_down_waits_and_then_starts(self) -> None:
+        self.reply("plan", [refusal("herdr-down", "herdr-core is not reachable (hc)"), started()])
+        self.enqueue()
+        daemon = self.daemon()
+        self.assertEqual(daemon.drove_wakes(), 0)
+        pending = self.store.pending()[0]
+        self.assertEqual((pending["attempts"], pending["last_gate"]), (1, "herdr-down"))
+        self.assertEqual(clock.parse(pending["next_attempt_at"]), self.now + dt.timedelta(seconds=4))
+        self.now += dt.timedelta(seconds=3)
+        self.assertEqual(self.daemon().drove_wakes(), 0, "a restart preserves the backoff")
+        self.assertEqual(len(self.calls()), 1, "no Drove command during backoff")
+        self.assertEqual(self.store.pending()[0]["attempts"], 1)
+        self.now += dt.timedelta(seconds=1)
+        self.assertEqual(daemon.drove_wakes(), 1)
+        self.assertEqual(len(self.calls()), 2)
+        self.assertEqual(self.store.pending(), [])
+        self.assertEqual(self.store.all_events()[0]["outcome"], "started")
+
+    def test_waiting_for_herdr_core_is_bounded_and_ends_out_loud(self) -> None:
+        self.reply("plan", refusal("herdr-down", "herdr-core is not reachable (hc)"))
+        self.enqueue()
+        daemon = self.daemon(max_wake_attempts=3)
+        for attempt in range(1, 4):
+            self.assertEqual(daemon.drove_wakes(), 0)
+            self.assertEqual(self.store.all_events()[0]["attempts"], attempt)
+            self.now += dt.timedelta(seconds=64)
+        daemon.drove_wakes()
+        self.assertEqual(self.store.pending(), [])
+        self.assertEqual(self.store.all_events()[0]["outcome"], "abandoned")
+        self.assertEqual(len(self.calls()), 3)
+        self.assertTrue(self.alerts.incidents)
+        self.assertEqual(self.alerts.incidents[-1]["error"], "refused 3 times for herdr-down")
+        daemon.drove_wakes()
+        self.assertEqual(len(self.calls()), 3, "abandoned wakes are never retried")
 
     def test_waiting_for_herdr_is_bounded_and_ends_out_loud(self) -> None:
         self.reply("plan", refusal("herdr-down"))

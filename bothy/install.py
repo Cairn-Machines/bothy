@@ -72,9 +72,11 @@ def agent_path(path: str | None) -> str:
 
     A launchd job gets a PATH of /usr/bin:/bin:/usr/sbin:/sbin, which has
     neither ~/.local/bin nor a Node version manager, so `drove` (a node script),
-    `herdr` and `claude` are all "not found". The shell that runs the installer
-    is the one place that knows where they are, so its PATH is written into the
-    plist, where `bothy install --dry-run` shows it before it is used.
+    `herdr` or `hc`, and `claude` are all "not found". The shell that runs the
+    installer is the one place that knows where they are, so its PATH is written
+    into the plist, where `bothy install --dry-run` shows it before it is used. Drove
+    needs a running herdr server or herdr-core (the Herdr app, or `hc` on a
+    headless host), with the corresponding `herdr` or `hc` binary on PATH.
     """
     seen: list[str] = []
     for entry in (path or "").split(":") + ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]:
@@ -251,8 +253,9 @@ def render_launchagent(target: Target) -> str:
     """A per-user LaunchAgent: no root, and it runs inside the person's session.
 
     That is the point of it. A LaunchDaemon has no GUI session, so it cannot
-    reach the herdr server a person started, the Claude login that lives in
-    their Keychain, or anything under their home that is not world-readable.
+    reach the herdr server or Herdr app (herdr-core) a person started, the
+    Claude login that lives in their Keychain, or anything under their home
+    that is not world-readable.
     The price is the mirror image: it starts when they log in, not when the
     machine boots, so it is for a machine somebody uses, and a client's
     unattended mini should keep the daemon.
