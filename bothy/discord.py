@@ -174,7 +174,7 @@ def _call(method: str, path: str, token: str, payload: dict[str, Any] | None = N
     request = urllib.request.Request(  # noqa: S310 - fixed https host
         API + path, data=data, method=method,
         headers={"Authorization": f"Bot {token}", "Content-Type": "application/json",
-                 "User-Agent": "DiscordBot (https://github.com/montytorr/bothy, 0.1)"},
+                 "User-Agent": "DiscordBot (https://github.com/Cairn-Machines/bothy, 0.1)"},
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
