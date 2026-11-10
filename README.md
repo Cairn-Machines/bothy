@@ -274,7 +274,7 @@ is a contract — `75` restart me, `78` stop — and the two service managers ne
 | `drove` | Starting Drove runs, watching them, passing on what needs a person |
 
 `bothy/vendor/a2a_reactor/` is vendored verbatim from
-[a2a-comms](https://github.com/Cairn-Machines/holloway) (MIT). Do not edit it.
+[Holloway](https://github.com/Cairn-Machines/holloway) (formerly A2A Comms, MIT). Do not edit it.
 
 ## Tests
 
